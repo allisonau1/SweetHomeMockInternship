@@ -778,7 +778,35 @@ public class FurnitureTable extends JTable implements View, Printable {
       // Change printable column header renderer
       printableColumn.setHeaderRenderer(printableHeaderRenderer);
       printableColumnModel.addColumn(printableColumn);
-    }    
+    }
+    // Ensure the Level column is included in printed output.
+    boolean hasLevelColumn = false;
+
+    for (int i = 0; i < printableColumnModel.getColumnCount(); i++) {
+      if (HomePieceOfFurniture.SortableProperty.LEVEL.equals(
+              printableColumnModel.getColumn(i).getIdentifier())) {
+        hasLevelColumn = true;
+        break;
+      }
+    }
+
+    if (!hasLevelColumn) {
+      TableColumn levelColumn =
+              ((FurnitureTableColumnModel)getColumnModel())
+                      .getAvailableColumn(
+                              HomePieceOfFurniture.SortableProperty.LEVEL);
+
+      if (levelColumn != null) {
+        TableColumn printableLevelColumn = new TableColumn();
+        printableLevelColumn.setIdentifier(levelColumn.getIdentifier());
+        printableLevelColumn.setHeaderValue(levelColumn.getHeaderValue());
+        printableLevelColumn.setCellRenderer(
+                levelColumn.getCellRenderer());
+        printableLevelColumn.setHeaderRenderer(printableHeaderRenderer);
+
+        printableColumnModel.addColumn(printableLevelColumn);
+      }
+    }
     return print(g, pageFormat, pageIndex, printableColumnModel, Color.BLACK);
   }
 
@@ -1112,6 +1140,13 @@ public class FurnitureTable extends JTable implements View, Printable {
           moveColumn(tableColumnIndex, i);
         }
       }
+    }
+    /**
+     * Returns not displayed columns
+     */
+    public TableColumn getAvailableColumn(
+            HomePieceOfFurniture.SortableProperty property) {
+      return this.availableColumns.get(property);
     }
 
     /**

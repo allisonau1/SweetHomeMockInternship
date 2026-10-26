@@ -145,4 +145,5 @@ class StudentFeaturesTest {
     pageFormat.setPaper(paper);
     return pageFormat;
   }
+
 }

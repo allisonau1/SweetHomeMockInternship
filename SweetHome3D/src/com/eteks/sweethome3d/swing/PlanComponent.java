@@ -310,6 +310,7 @@ public class PlanComponent extends JComponent implements PlanView, Scrollable, P
   private Map<Collection<Wall>, Area>       wallAreasCache;
   private Map<RotatedTextureKey, BufferedImage> floorTextureImagesCache;
   private Map<HomePieceOfFurniture, PieceOfFurnitureTopViewIcon> furnitureTopViewIconsCache;
+  private Level                             lastPrintedLevel;
 
   private static ExecutorService            backgroundImageLoader;
   
@@ -2002,12 +2003,59 @@ public class PlanComponent extends JComponent implements PlanView, Scrollable, P
     }
     return strokeWidth;
   }
+
+  /**
+   *
+   *  Loops through levels to print each.
+   */
+  public int print(Graphics g, PageFormat pageFormat, int pageIndex) {
+    Level originalLevel = this.home.getSelectedLevel();
+    this.lastPrintedLevel = null;
+    int pagesBeforeLevel = 0;
+    try {
+      for (Level level : this.home.getLevels()) {
+        if (!level.isViewable()) {
+          continue;
+        }
+
+        this.home.setSelectedLevel(level);
+
+        // Count pages for this level without drawing onto the real page.
+        BufferedImage dummyImage = new BufferedImage(
+                1, 1, BufferedImage.TYPE_INT_ARGB);
+        Graphics dummyGraphics = dummyImage.createGraphics();
+
+        int levelPageCount = 0;
+        try {
+          while (printSelectedLevel(
+                  dummyGraphics, pageFormat, levelPageCount) == PAGE_EXISTS) {
+            levelPageCount++;
+          }
+        } finally {
+          dummyGraphics.dispose();
+        }
+        // Print the requested page if it belongs to this level.
+        if (pageIndex < pagesBeforeLevel + levelPageCount) {
+          this.lastPrintedLevel = level;
+          return printSelectedLevel(
+                  g, pageFormat, pageIndex - pagesBeforeLevel);
+        }
+
+        pagesBeforeLevel += levelPageCount;
+      }
+
+      return NO_SUCH_PAGE;
+    } finally {
+      // Always restore the original selection.
+      this.home.setSelectedLevel(originalLevel);
+    }
+  }
   
   /**
    * Prints this component plan at the scale given in the home print attributes or at a scale 
    * that makes it fill <code>pageFormat</code> imageable size if this attribute is <code>null</code>.
    */
-  public int print(Graphics g, PageFormat pageFormat, int pageIndex) {
+  public int printSelectedLevel(Graphics g, PageFormat pageFormat, int pageIndex) {
     List<Selectable> printedItems = getPaintedItems(); 
     Rectangle2D printedItemBounds = getItemsBounds(g, printedItems);
     if (printedItemBounds != null) {
@@ -2278,6 +2326,13 @@ public class PlanComponent extends JComponent implements PlanView, Scrollable, P
     } else {
       return Color.WHITE;
     }
+  }
+
+  /**
+   * Returns the last printed level.
+   */
+  public Level getLastPrintedLevel() {
+    return this.lastPrintedLevel;
   }
 
   /**
